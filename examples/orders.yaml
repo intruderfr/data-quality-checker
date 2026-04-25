@@ -1,0 +1,74 @@
+dataset:
+  format: csv
+  csv_options:
+    delimiter: ","
+    encoding: utf-8
+
+schema:
+  required: [order_id, customer_id, amount, status, email, created_at, country]
+  forbidden: [internal_notes]
+  dtypes:
+    order_id: string
+    amount: float
+    created_at: datetime
+    customer_id: string
+
+checks:
+  - name: row count sanity
+    type: row_count
+    min: 5
+    max: 100000
+    severity: error
+
+  - name: null:order_id
+    type: null_rate
+    column: order_id
+    max_pct: 0.0
+    severity: error
+
+  - name: null:email is tolerated
+    type: null_rate
+    column: email
+    max_pct: 5.0
+    severity: warn
+
+  - name: unique:order_id
+    type: unique
+    column: order_id
+    severity: error
+
+  - name: range:amount
+    type: range
+    column: amount
+    min: 0
+    max: 10000
+    severity: error
+
+  - name: regex:email format
+    type: regex
+    column: email
+    pattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    severity: warn
+
+  - name: enum:status
+    type: enum
+    column: status
+    allowed: [NEW, PAID, REFUNDED, CANCELLED]
+    severity: error
+
+  - name: distinct cap on country
+    type: distinct_count
+    column: country
+    max: 250
+    severity: warn
+
+  - name: created_at parses as date
+    type: datetime
+    column: created_at
+    severity: error
+
+  - name: refunds should not have positive amounts
+    type: query
+    expression: "status == 'REFUNDED' and amount > 0"
+    expect: 0
+    severity: error
